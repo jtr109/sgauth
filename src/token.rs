@@ -11,7 +11,7 @@ fn create_random_string(length: usize) -> String {
         .collect()
 }
 
-fn create_jwt_secret() -> String {
+pub fn create_jwt_secret() -> String {
     create_random_string(32)
 }
 
@@ -27,21 +27,21 @@ pub fn create_claims(sub: &str) -> Claims {
 }
 
 #[derive(Debug)]
-pub enum AppError {
+pub enum TokenError {
     JwtError(jwt::errors::Error),
 }
 
-impl From<jwt::errors::Error> for AppError {
+impl From<jwt::errors::Error> for TokenError {
     fn from(error: jwt::errors::Error) -> Self {
-        AppError::JwtError(error)
+        TokenError::JwtError(error)
     }
 }
 
-pub fn encode_token(claims: &Claims, secret: &str) -> Result<String, AppError> {
-    encode(&Header::default(), claims, secret.as_bytes()).map_err(|e| AppError::JwtError(e))
+pub fn encode_token(claims: &Claims, secret: &str) -> Result<String, TokenError> {
+    encode(&Header::default(), claims, secret.as_bytes()).map_err(|e| TokenError::JwtError(e))
 }
 
-fn decode_token(encoded: &str, secret: &str) -> Result<Claims, AppError> {
+fn decode_token(encoded: &str, secret: &str) -> Result<Claims, TokenError> {
     // decode json web token
     // 由于目前 token 中不需要 exp, 忽略 exp validation
     // 方法见: https://github.com/Keats/jsonwebtoken/issues/65
@@ -51,7 +51,7 @@ fn decode_token(encoded: &str, secret: &str) -> Result<Claims, AppError> {
     };
     decode::<Claims>(encoded, secret.as_bytes(), &valication)
         .map(|data| data.claims.into())
-        .map_err(|e| AppError::JwtError(e))
+        .map_err(|e| TokenError::JwtError(e))
 }
 
 #[cfg(test)]
