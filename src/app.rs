@@ -16,18 +16,18 @@ fn create_jwt_secret() -> String {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Claims {
+pub struct Claims {
     sub: String,
 }
 
-fn create_claims(sub: &str) -> Claims {
+pub fn create_claims(sub: &str) -> Claims {
     Claims {
         sub: sub.to_string(),
     }
 }
 
 #[derive(Debug)]
-enum AppError {
+pub enum AppError {
     JwtError(jwt::errors::Error),
 }
 
@@ -37,7 +37,7 @@ impl From<jwt::errors::Error> for AppError {
     }
 }
 
-fn encode_token(claims: &Claims, secret: &str) -> Result<String, AppError> {
+pub fn encode_token(claims: &Claims, secret: &str) -> Result<String, AppError> {
     encode(&Header::default(), claims, secret.as_bytes()).map_err(|e| AppError::JwtError(e))
 }
 
