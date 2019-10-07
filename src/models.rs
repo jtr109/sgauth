@@ -39,12 +39,12 @@ impl App {
         encode_token(&claims, &self.jwt_secret).map_err(|e| AppError::TokenError(e))
     }
 
-    pub fn get_by_id(conn: &PgConnection, id: Uuid) -> Result<App, AppError> {
-        // app.filter(app::dsl::id.eq(id)).first(conn).expect
+    pub fn get_by_id(conn: &PgConnection, id: Uuid) -> Result<Option<App>, AppError> {
         app::table
             .filter(app::dsl::id.eq(id))
             .limit(1)
             .first::<App>(conn)
+            .optional()
             .map_err(|e| AppError::DieselError(e))
     }
 
