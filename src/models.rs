@@ -1,9 +1,9 @@
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use diesel::result::Error as DieselError;
 use dotenv::dotenv;
 use std::env;
 use uuid::Uuid;
-// use diesel::sql_types::Uuid;
 
 use crate::schema::app;
 use crate::token::{create_claims, create_jwt_secret, encode_token, Claims, TokenError};
@@ -17,7 +17,7 @@ pub fn establish_connection() -> PgConnection {
 
 #[derive(Queryable, Debug)]
 pub struct App {
-    id: Uuid,
+    pub id: Uuid,
     jwt_secret: String,
 }
 
@@ -28,8 +28,9 @@ struct NewApp {
 }
 
 #[derive(Debug)]
-enum AppError {
+pub enum AppError {
     TokenError(TokenError),
+    DieselError(DieselError),
 }
 
 impl App {
@@ -46,14 +47,14 @@ impl App {
             .expect("Error loading app")
     }
 
-    pub fn create(conn: &PgConnection) -> Self {
+    pub fn create(conn: &PgConnection) -> Result<Self, AppError> {
         let new_app = NewApp {
             jwt_secret: create_jwt_secret(),
         };
         diesel::insert_into(app::table)
             .values(&new_app)
             .get_result(conn)
-            .expect("Error saving new app")
+            .map_err(|e| AppError::DieselError(e))
     }
 }
 
