@@ -34,7 +34,7 @@ pub enum AppError {
 }
 
 impl App {
-    fn encode_jwt(&self) -> Result<String, AppError> {
+    pub fn encode_jwt(&self) -> Result<String, AppError> {
         let claims = create_claims(&self.id.to_simple().to_string());
         encode_token(&claims, &self.jwt_secret).map_err(|e| AppError::TokenError(e))
     }
