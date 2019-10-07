@@ -1,8 +1,29 @@
-use crate::token::{create_claims, create_jwt_secret, encode_token, Claims, TokenError};
+use diesel::pg::PgConnection;
+use diesel::prelude::*;
+use dotenv::dotenv;
+use std::env;
 use uuid::Uuid;
+// use diesel::sql_types::Uuid;
 
-struct App {
+use crate::schema::app;
+use crate::token::{create_claims, create_jwt_secret, encode_token, Claims, TokenError};
+
+pub fn establish_connection() -> PgConnection {
+    dotenv().ok();
+
+    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    PgConnection::establish(&database_url).expect(&format!("Error connecting to {}", database_url))
+}
+
+#[derive(Queryable, Debug)]
+pub struct App {
     id: Uuid,
+    jwt_secret: String,
+}
+
+#[derive(Insertable)]
+#[table_name = "app"]
+struct NewApp {
     jwt_secret: String,
 }
 
@@ -15,6 +36,24 @@ impl App {
     fn encode_jwt(&self) -> Result<String, AppError> {
         let claims = create_claims(&self.id.to_simple().to_string());
         encode_token(&claims, &self.jwt_secret).map_err(|e| AppError::TokenError(e))
+    }
+
+    pub fn get_by_id(conn: &PgConnection) -> Vec<App> {
+        // app.filter(app::dsl::id.eq(id)).first(conn).expect
+        app::table
+            .limit(1)
+            .load::<App>(conn)
+            .expect("Error loading app")
+    }
+
+    pub fn create(conn: &PgConnection) -> Self {
+        let new_app = NewApp {
+            jwt_secret: create_jwt_secret(),
+        };
+        diesel::insert_into(app::table)
+            .values(&new_app)
+            .get_result(conn)
+            .expect("Error saving new app")
     }
 }
 
