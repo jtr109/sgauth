@@ -9,6 +9,6 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let id = Uuid::parse_str(&args[1]).unwrap();
     let conn = establish_connection();
-    let app = App::get_by_id(&conn, id).unwrap().unwrap();
+    let app = App::get_by_id(&conn, &id).unwrap().unwrap();
     println!("app token is\n{}", app.encode_jwt().unwrap());
 }

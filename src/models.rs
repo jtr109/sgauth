@@ -6,7 +6,10 @@ use std::env;
 use uuid::Uuid;
 
 use crate::schema::app;
-use crate::token::{create_claims, create_jwt_secret, encode_token, Claims, TokenError};
+use crate::token::{
+    create_claims, create_jwt_secret, decode_token, encode_token, get_sub_without_verification,
+    TokenError,
+};
 
 pub fn establish_connection() -> PgConnection {
     dotenv().ok();
@@ -18,7 +21,7 @@ pub fn establish_connection() -> PgConnection {
 #[derive(Queryable, Debug)]
 pub struct App {
     pub id: Uuid,
-    jwt_secret: String,
+    pub jwt_secret: String,
 }
 
 #[derive(Insertable)]
@@ -31,6 +34,7 @@ struct NewApp {
 pub enum AppError {
     TokenError(TokenError),
     DieselError(DieselError),
+    UuidError(uuid::parser::ParseError),
 }
 
 impl App {
@@ -39,7 +43,7 @@ impl App {
         encode_token(&claims, &self.jwt_secret).map_err(|e| AppError::TokenError(e))
     }
 
-    pub fn get_by_id(conn: &PgConnection, id: Uuid) -> Result<Option<App>, AppError> {
+    pub fn get_by_id(conn: &PgConnection, id: &Uuid) -> Result<Option<App>, AppError> {
         app::table
             .filter(app::dsl::id.eq(id))
             .limit(1)
@@ -56,6 +60,19 @@ impl App {
             .values(&new_app)
             .get_result(conn)
             .map_err(|e| AppError::DieselError(e))
+    }
+
+    pub fn get_from_jwt(conn: &PgConnection, encoded: &str) -> Result<Option<App>, AppError> {
+        let sub = get_sub_without_verification(encoded).map_err(|e| AppError::TokenError(e))?;
+        let id = Uuid::parse_str(&sub).map_err(|e| AppError::UuidError(e))?;
+        match Self::get_by_id(conn, &id) {
+            Err(e) => Err(e),
+            Ok(None) => Ok(None),
+            Ok(Some(app)) => {
+                decode_token(encoded, &app.jwt_secret).map_err(|e| AppError::TokenError(e))?; // validate jwt
+                Ok(Some(app))
+            }
+        }
     }
 }
 

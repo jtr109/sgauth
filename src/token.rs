@@ -1,5 +1,5 @@
 use jsonwebtoken as jwt;
-use jsonwebtoken::{decode, encode, Header, Validation};
+use jsonwebtoken::{dangerous_unsafe_decode, decode, encode, Header, Validation};
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
@@ -17,7 +17,7 @@ pub fn create_jwt_secret() -> String {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    sub: String,
+    pub sub: String,
 }
 
 pub fn create_claims(sub: &str) -> Claims {
@@ -41,16 +41,25 @@ pub fn encode_token(claims: &Claims, secret: &str) -> Result<String, TokenError>
     encode(&Header::default(), claims, secret.as_bytes()).map_err(|e| TokenError::JwtError(e))
 }
 
-fn decode_token(encoded: &str, secret: &str) -> Result<Claims, TokenError> {
-    // decode json web token
-    // 由于目前 token 中不需要 exp, 忽略 exp validation
-    // 方法见: https://github.com/Keats/jsonwebtoken/issues/65
+// decode json web token
+// 由于目前 token 中不需要 exp, 忽略 exp validation
+// 方法见: https://github.com/Keats/jsonwebtoken/issues/65
+pub fn decode_token(encoded: &str, secret: &str) -> Result<Claims, TokenError> {
     let valication = Validation {
         validate_exp: false,
         ..Validation::default()
     };
     decode::<Claims>(encoded, secret.as_bytes(), &valication)
         .map(|data| data.claims.into())
+        .map_err(|e| TokenError::JwtError(e))
+}
+
+// *危险*
+// 未验证解析 payload 信息, 没有安全措施
+// https://docs.rs/jsonwebtoken/6.0.1/jsonwebtoken/fn.dangerous_unsafe_decode.html
+pub fn get_sub_without_verification(encoded: &str) -> Result<String, TokenError> {
+    dangerous_unsafe_decode::<Claims>(encoded)
+        .map(|data| data.claims.sub)
         .map_err(|e| TokenError::JwtError(e))
 }
 
