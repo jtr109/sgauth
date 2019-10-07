@@ -39,12 +39,13 @@ impl App {
         encode_token(&claims, &self.jwt_secret).map_err(|e| AppError::TokenError(e))
     }
 
-    pub fn get_by_id(conn: &PgConnection) -> Vec<App> {
+    pub fn get_by_id(conn: &PgConnection, id: Uuid) -> Result<App, AppError> {
         // app.filter(app::dsl::id.eq(id)).first(conn).expect
         app::table
+            .filter(app::dsl::id.eq(id))
             .limit(1)
-            .load::<App>(conn)
-            .expect("Error loading app")
+            .first::<App>(conn)
+            .map_err(|e| AppError::DieselError(e))
     }
 
     pub fn create(conn: &PgConnection) -> Result<Self, AppError> {
