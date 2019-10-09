@@ -1,3 +1,4 @@
+use crate::models::{establish_connection, App, AppError};
 use actix_web::{HttpRequest, HttpResponse};
 use regex::Regex;
 
@@ -16,8 +17,25 @@ fn get_jwt_from_request(req: &HttpRequest) -> Option<String> {
     }
 }
 
-fn index(req: HttpRequest) -> HttpResponse {
-    HttpResponse::new(http::StatusCode::OK)
+fn authentication(req: HttpRequest) -> HttpResponse {
+    let token = get_jwt_from_request(&req);
+    let conn = establish_connection();
+    let unauthorized = HttpResponse::new(http::StatusCode::UNAUTHORIZED);
+    match token {
+        None => unauthorized,
+        Some(t) => match App::get_from_jwt(&conn, &t) {
+            Err(AppError::DieselError(_)) => {
+                HttpResponse::new(http::StatusCode::INTERNAL_SERVER_ERROR)
+            }
+            Err(_) => unauthorized,
+            Ok(app) => match app {
+                Some(a) => HttpResponse::Ok()
+                    .header("X-UID", a.id.to_string())
+                    .body(""),
+                None => unauthorized,
+            },
+        },
+    }
 }
 
 #[cfg(test)]
