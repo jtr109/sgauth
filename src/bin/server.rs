@@ -1,4 +1,7 @@
+extern crate sgauth;
+
 use actix_web::{web, App, HttpResponse, HttpServer};
+use sgauth::handlers;
 
 fn main() {
     HttpServer::new(|| {
