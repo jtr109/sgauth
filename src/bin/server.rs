@@ -1,6 +1,6 @@
 extern crate sgauth;
 
-use actix_web::{web, App, HttpResponse, HttpServer};
+use actix_web::{web, App, HttpServer};
 use sgauth::handlers::authentication;
 
 fn main() {
