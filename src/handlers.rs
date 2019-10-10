@@ -17,7 +17,7 @@ fn get_jwt_from_request(req: &HttpRequest) -> Option<String> {
     }
 }
 
-fn authentication(req: HttpRequest) -> HttpResponse {
+pub fn authentication(req: HttpRequest) -> HttpResponse {
     let token = get_jwt_from_request(&req);
     let conn = establish_connection();
     let unauthorized = HttpResponse::new(http::StatusCode::UNAUTHORIZED);
@@ -30,7 +30,7 @@ fn authentication(req: HttpRequest) -> HttpResponse {
             Err(_) => unauthorized,
             Ok(app) => match app {
                 Some(a) => HttpResponse::Ok()
-                    .header("X-UID", a.id.to_string())
+                    .header("X-UID", a.id.to_simple().to_string())
                     .body(""),
                 None => unauthorized,
             },
