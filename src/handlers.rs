@@ -18,23 +18,25 @@ fn get_jwt_from_request(req: &HttpRequest) -> Option<String> {
 }
 
 pub fn authentication(req: HttpRequest) -> HttpResponse {
-    let token = get_jwt_from_request(&req);
-    let conn = establish_connection();
     let unauthorized = HttpResponse::new(http::StatusCode::UNAUTHORIZED);
-    match token {
+    // let token = get_jwt_from_request(&req);
+    let token = match get_jwt_from_request(&req) {
+        None => return unauthorized,
+        Some(t) => t,
+    };
+    let conn = establish_connection();
+    let app = match App::get_from_jwt(&conn, &token) {
+        Err(AppError::DieselError(_)) => {
+            return HttpResponse::new(http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
+        Err(_) => return unauthorized,
+        Ok(a) => a,
+    };
+    match app {
+        Some(a) => HttpResponse::Ok()
+            .header("X-UID", a.id.to_simple().to_string())
+            .body(""),
         None => unauthorized,
-        Some(t) => match App::get_from_jwt(&conn, &t) {
-            Err(AppError::DieselError(_)) => {
-                HttpResponse::new(http::StatusCode::INTERNAL_SERVER_ERROR)
-            }
-            Err(_) => unauthorized,
-            Ok(app) => match app {
-                Some(a) => HttpResponse::Ok()
-                    .header("X-UID", a.id.to_simple().to_string())
-                    .body(""),
-                None => unauthorized,
-            },
-        },
     }
 }
 
