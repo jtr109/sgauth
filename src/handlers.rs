@@ -19,7 +19,6 @@ fn get_jwt_from_request(req: &HttpRequest) -> Option<String> {
 
 pub fn authentication(req: HttpRequest) -> HttpResponse {
     let unauthorized = HttpResponse::new(http::StatusCode::UNAUTHORIZED);
-    // let token = get_jwt_from_request(&req);
     let token = match get_jwt_from_request(&req) {
         None => return unauthorized,
         Some(t) => t,
